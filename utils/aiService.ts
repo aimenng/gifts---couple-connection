@@ -95,16 +95,19 @@ export async function analyzeImage(imageBase64: string): Promise<AIAnalysisResul
     }
 }
 
+import { getNow } from './timeService';
+
 /**
  * Mock analysis for testing (when no API key)
+ * Accepts an optional fileDate to use instead of today's date
  */
-export async function mockAnalyzeImage(): Promise<AIAnalysisResult> {
+export async function mockAnalyzeImage(fileDate?: string): Promise<AIAnalysisResult> {
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     return {
         location: '未知地点',
-        date: new Date().toISOString().split('T')[0],
+        date: fileDate || getNow().format('YYYY-MM-DD'),
         description: '一张美好的照片',
         tags: ['回忆', '美好时光'],
         confidence: 0.5

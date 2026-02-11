@@ -1,177 +1,417 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, Mail, Share, ArrowRight, AlertCircle, LogIn, User as UserIcon } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  Copy,
+  Link2,
+  LogOut,
+  Mail,
+  Shield,
+  Unlink2,
+} from 'lucide-react';
 import { useApp } from '../context';
 import { useAuth } from '../authContext';
 import { IMAGES } from '../constants';
+import { useToast } from '../components/Toast';
+import { CuteLoadingScreen } from '../components/CuteLoadingScreen';
 
 interface ConnectionProps {
   onComplete: () => void;
   onLogin: () => void;
+  onBack: () => void;
 }
 
-export const ConnectionPage: React.FC<ConnectionProps> = ({ onComplete, onLogin }) => {
-  const { connect, inviteCode: appInviteCode } = useApp();
-  const { currentUser, partner } = useAuth();
+export const ConnectionPage: React.FC<ConnectionProps> = ({ onComplete, onLogin, onBack }) => {
+  const {
+    connect,
+    disconnect,
+    inviteCode: appInviteCode,
+    boundInviteCode,
+    isConnected,
+    pendingBindingRequests,
+    refreshPendingBindingRequests,
+    respondBindingRequest,
+  } = useApp();
+  const { currentUser, partner, logout } = useAuth();
+  const { showToast } = useToast();
 
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [error, setError] = useState('');
+  const [expandedManage, setExpandedManage] = useState(!isConnected);
+  const [busyAction, setBusyAction] = useState<
+    'connect' | 'disconnect' | 'logout' | 'accept' | 'reject' | null
+  >(null);
+  const [showSlowLoader, setShowSlowLoader] = useState(false);
+  const [loadingText, setLoadingText] = useState('正在处理中...');
 
-  // Use either auth user's invite code or local app state's
   const displayInviteCode = currentUser?.invitationCode || appInviteCode;
 
-  const handleJoin = () => {
+  useEffect(() => {
+    if (!currentUser) return;
+    refreshPendingBindingRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (!busyAction) {
+      setShowSlowLoader(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowSlowLoader(true), 320);
+    return () => window.clearTimeout(timer);
+  }, [busyAction]);
+
+  const connectionStatusText = useMemo(() => {
+    if (partner && isConnected) return `已与 ${partner.name || '对方'} 连接`;
+    if (currentUser) return '尚未绑定，随时可连接';
+    return '登录后可绑定邀请码';
+  }, [currentUser, isConnected, partner]);
+
+  const handleJoin = async () => {
+    if (isConnected) {
+      setError('请先解除当前绑定，再绑定新的邀请码');
+      return;
+    }
+
     setError('');
-    const success = connect(inviteCodeInput);
-    if (success) {
-      onComplete();
-    } else {
-      setError('邀请码格式不正确，请输入至少6位字符');
+    setLoadingText('正在发送绑定请求...');
+    setBusyAction('connect');
+
+    try {
+      const result = await connect(inviteCodeInput);
+      if (result.ok) {
+        showToast(result.message || '绑定请求已发送', 'success');
+        if (!result.pending) {
+          onComplete();
+        } else {
+          setInviteCodeInput('');
+        }
+      } else {
+        setError(result.message || '邀请码格式不正确');
+      }
+    } finally {
+      setBusyAction(null);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleJoin();
+  const handleDisconnect = async () => {
+    if (!isConnected) return;
+    if (!confirm('确认解除当前绑定关系吗？')) return;
+
+    setLoadingText('正在解除绑定...');
+    setBusyAction('disconnect');
+    try {
+      await disconnect();
+      setExpandedManage(true);
+      setError('');
+      setInviteCodeInput('');
+      showToast('已解除绑定，现在可以绑定新的邀请码', 'success');
+    } catch (error: any) {
+      setError(error?.message || '解绑失败，请稍后重试');
+    } finally {
+      setBusyAction(null);
     }
+  };
+  const handleLogout = async () => {
+    setLoadingText('正在退出登录...');
+    setBusyAction('logout');
+    try {
+      await logout();
+      showToast('已退出登录', 'success');
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleRespondBindingRequest = async (requestId: string, action: 'accept' | 'reject') => {
+    setError('');
+    setLoadingText(action === 'accept' ? '正在确认绑定...' : '正在拒绝请求...');
+    setBusyAction(action);
+    try {
+      const result = await respondBindingRequest(requestId, action);
+      if (!result.ok) {
+        setError(result.message || '处理失败，请稍后重试');
+        return;
+      }
+      showToast(result.message || (action === 'accept' ? '已同意绑定请求' : '已拒绝绑定请求'), 'success');
+      if (action === 'accept') {
+        onComplete();
+      }
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleCopyInviteCode = () => {
+    if (!displayInviteCode) return;
+    navigator.clipboard.writeText(displayInviteCode);
+    showToast('邀请码已复制', 'love');
   };
 
   return (
-    <div className="flex flex-col h-full w-full px-4 pt-safe-top animate-fade-in-up overflow-y-auto hide-scrollbar">
-      <div className="pb-32 w-full">
-        {/* Header */}
-        <div className="flex flex-col items-center justify-center pt-8 pb-6">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            {/* My Avatar */}
-            <div className="w-14 h-14 rounded-full border-2 border-white shadow-md bg-stone-200 overflow-hidden relative">
-              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${currentUser?.avatar || IMAGES.COFFEE}')` }}></div>
+    <div className="flex flex-col h-full w-full px-4 pt-safe-top pb-6 animate-fade-in-up overflow-y-auto hide-scrollbar relative">
+      <div className="absolute top-12 -right-16 w-44 h-44 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-16 -left-16 w-40 h-40 rounded-full bg-rose-400/8 blur-3xl pointer-events-none" />
+
+      <header className="relative z-10 flex items-center justify-between py-3">
+        <button
+          onClick={onBack}
+          className="size-10 rounded-xl bg-[var(--eye-bg-secondary)] border border-[var(--eye-border)] text-[var(--eye-text-primary)] flex items-center justify-center hover:border-primary/30 transition-all"
+          title="返回"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+
+        <div className="text-center">
+          <h1 className="text-[18px] font-bold text-[var(--eye-text-primary)]">关系绑定</h1>
+          <p className="text-xs text-[var(--eye-text-secondary)] mt-0.5">{connectionStatusText}</p>
+        </div>
+
+        <button
+          onClick={onLogin}
+          className="h-10 px-3 rounded-xl bg-[var(--eye-bg-secondary)] border border-[var(--eye-border)] text-[var(--eye-text-secondary)] text-xs font-medium hover:text-primary hover:border-primary/30 transition-all"
+          title="账号设置"
+        >
+          账号
+        </button>
+      </header>
+
+      <section className="relative z-10 rounded-2xl border border-[var(--eye-border)] bg-[var(--eye-bg-secondary)]/70 p-3 mt-2">
+        {currentUser ? (
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full border-2 border-white shadow-sm bg-stone-200 overflow-hidden relative shrink-0">
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url('${currentUser.avatar || IMAGES.COFFEE}')` }}
+              />
             </div>
 
-            <div className="w-8 h-8 rounded-full bg-sage/10 flex items-center justify-center text-sage">
-              <Heart className="w-4 h-4 fill-current" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[var(--eye-text-primary)] font-bold text-sm truncate">
+                {currentUser.name || currentUser.email.split('@')[0]}
+              </p>
+              <p className="text-[var(--eye-text-secondary)] text-xs truncate">{currentUser.email}</p>
             </div>
 
-            {/* Partner Avatar - Placeholder or Real */}
-            <div className="w-14 h-14 rounded-full border-2 border-white shadow-md bg-stone-100 overflow-hidden relative flex items-center justify-center">
-              {partner?.avatar ? (
-                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${partner.avatar}')` }}></div>
-              ) : (
-                <UserIcon className="w-6 h-6 text-gray-300" />
-              )}
-            </div>
+            <button
+              onClick={handleLogout}
+              className="size-9 rounded-xl bg-white/80 dark:bg-white/10 text-sage hover:text-red-500 transition-all flex items-center justify-center border border-[var(--eye-border)]"
+              title="退出登录"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-
-          <h1 className="text-text-main dark:text-white tracking-tight text-[28px] font-bold leading-tight text-center font-display">
-            {partner ? `与 ${partner.name || 'Ta'} 连接中` : '开启共同旅程'}
-          </h1>
-
-          <p className="text-sage text-sm font-medium mt-4">
-            {partner ? '一起记录更美好的时光' : '连接彼此，记录每一个瞬间'}
-          </p>
-        </div>
-
-        {/* Card 1: Invite */}
-        <div className="w-full mb-5">
-          <div className="flex flex-col items-stretch justify-start rounded-3xl shadow-soft bg-white dark:bg-[#253018] overflow-hidden border border-sage/10">
-            {/* Graphic Area */}
-            <div className="w-full h-32 bg-sage-light dark:bg-sage/20 flex items-center justify-center relative overflow-hidden">
-              <div className="absolute -right-4 -top-8 w-24 h-24 rounded-full bg-primary/20 blur-xl"></div>
-              <div className="absolute -left-4 -bottom-8 w-32 h-32 rounded-full bg-sage/20 blur-xl"></div>
-              <div className="z-10 flex flex-col items-center gap-2">
-                <Mail className="text-sage w-10 h-10" />
-              </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <Shield className="w-5 h-5" />
             </div>
-
-            <div className="flex flex-col p-5 gap-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-text-main dark:text-white text-xl font-bold leading-tight">创建新关系</p>
-                  <p className="text-sage text-sm font-normal mt-1">生成邀请码邀请另一半加入</p>
-                </div>
-              </div>
-
-              <div className="mt-2 bg-background-light dark:bg-black/20 rounded-xl p-4 flex flex-col items-center justify-center gap-2 border border-dashed border-sage/30">
-                <span className="text-xs uppercase tracking-wider text-sage font-medium">您的专属邀请码</span>
-                <p className="text-text-main dark:text-white text-3xl font-mono font-bold tracking-widest">
-                  {displayInviteCode || '生成中...'}
-                </p>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (displayInviteCode) navigator.clipboard.writeText(displayInviteCode);
-                  alert("复制成功");
-                }}
-                className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-12 px-4 bg-primary hover:bg-[#7a8a4b] text-white text-base font-bold transition-all mt-1 active:scale-[0.98]"
-              >
-                <Share className="w-5 h-5" />
-                <span className="truncate">复制邀请码</span>
-              </button>
+            <div className="flex-1 min-w-0">
+              <p className="text-[var(--eye-text-primary)] font-bold text-sm">登录后开启关系绑定</p>
+              <p className="text-[var(--eye-text-secondary)] text-xs">支持邮箱验证码注册、登录与重置密码</p>
             </div>
+            <button
+              onClick={onLogin}
+              className="h-9 px-3 rounded-xl bg-primary text-white text-xs font-bold hover:bg-[#7a8a4b] transition-all"
+            >
+              登录
+            </button>
           </div>
-        </div>
+        )}
+      </section>
 
-        {/* Divider */}
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-sage/20"></div>
-          <span className="flex-shrink-0 mx-4 text-sage/60 text-xs font-medium uppercase tracking-widest">或者</span>
-          <div className="flex-grow border-t border-sage/20"></div>
-        </div>
-
-        {/* Card 2: Join */}
-        <div className="w-full mt-2 mb-6">
-          <div className="flex flex-col items-stretch justify-start rounded-3xl shadow-soft bg-white dark:bg-[#253018] overflow-hidden border border-sage/10 transition-transform">
-            <div className="flex w-full items-center p-5 gap-4">
-              <div className="h-14 w-14 rounded-2xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0 text-orange-600 dark:text-orange-400">
-                <Heart className="w-7 h-7" />
-              </div>
-              <div className="flex flex-col flex-grow gap-1">
-                <p className="text-text-main dark:text-white text-lg font-bold leading-tight">加入已有关系</p>
-                <p className="text-sage text-sm font-normal leading-normal">输入对方分享的邀请码</p>
-              </div>
-            </div>
-
-            <div className="px-5 pb-5 pt-0">
-              <div className="relative">
-                <input
-                  className={`w-full h-12 rounded-xl bg-background-light dark:bg-black/20 border-2 ${error ? 'border-red-500' : 'border-transparent'} focus:border-primary focus:bg-white dark:focus:bg-black/40 focus:ring-0 text-text-main dark:text-white text-center font-mono placeholder:font-sans transition-all placeholder:text-sage/40`}
-                  placeholder="输入邀请码"
-                  type="text"
-                  value={inviteCodeInput}
-                  onChange={(e) => {
-                    setInviteCodeInput(e.target.value);
-                    setError('');
-                  }}
-                  onKeyPress={handleKeyPress}
-                />
-                <button
-                  onClick={handleJoin}
-                  className="absolute right-2 top-2 bottom-2 aspect-square rounded-lg bg-white dark:bg-[#344026] text-sage hover:text-primary transition-colors flex items-center justify-center shadow-sm disabled:opacity-50"
-                  disabled={!inviteCodeInput.trim()}
-                >
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-              {error && (
-                <div className="flex items-center gap-2 mt-2 text-red-500 text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{error}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Restore Account Link */}
-        <div className="w-full flex justify-center pb-8">
-          <button
-            onClick={onLogin}
-            className="flex items-center gap-2 text-sage hover:text-primary transition-colors text-sm font-medium py-2 px-4 rounded-lg hover:bg-sage/10"
+      <section className="relative z-10 rounded-2xl border border-[var(--eye-border)] bg-white/70 dark:bg-black/20 p-4 mt-3">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[var(--eye-text-primary)] font-bold text-base">邀请码状态</p>
+          <span
+            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+              isConnected ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-700'
+            }`}
           >
-            <LogIn className="w-4 h-4" />
-            {currentUser ? '切换账号' : '已有账号？登录恢复数据'}
+            {isConnected ? '已绑定' : '未绑定'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-[var(--eye-border)] bg-[var(--eye-bg-primary)]/70 p-3">
+            <p className="text-[11px] text-[var(--eye-text-secondary)] mb-1">我的邀请码</p>
+            <p className="font-mono font-bold text-[var(--eye-text-primary)] tracking-[0.16em] text-sm">
+              {displayInviteCode || '生成中...'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-[var(--eye-border)] bg-[var(--eye-bg-primary)]/70 p-3">
+            <p className="text-[11px] text-[var(--eye-text-secondary)] mb-1">已绑定邀请码</p>
+            <p className="font-mono font-bold text-[var(--eye-text-primary)] tracking-[0.16em] text-sm">
+              {boundInviteCode || '暂无'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <button
+            onClick={handleCopyInviteCode}
+            disabled={!displayInviteCode}
+            className="h-10 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-[#7a8a4b] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-1.5"
+          >
+            <Copy className="w-4 h-4" />
+            复制邀请码
+          </button>
+          <button
+            onClick={handleDisconnect}
+            disabled={!isConnected}
+            className="h-10 rounded-xl border border-red-200 bg-red-50 text-red-500 font-semibold text-sm hover:bg-red-100 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-1.5"
+          >
+            <Unlink2 className="w-4 h-4" />
+            解除绑定
           </button>
         </div>
-      </div>
+      </section>
+
+      {currentUser && pendingBindingRequests.length > 0 && (
+        <section className="relative z-10 rounded-2xl border border-[var(--eye-border)] bg-white/70 dark:bg-black/20 p-4 mt-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[var(--eye-text-primary)] font-bold text-base">待你确认的绑定请求</p>
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+              {pendingBindingRequests.length}
+            </span>
+          </div>
+
+          {pendingBindingRequests.map((request) => (
+            <div
+              key={request.id}
+              className="rounded-xl border border-[var(--eye-border)] bg-[var(--eye-bg-primary)]/70 p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--eye-text-primary)] truncate">
+                    {request.requester.name || request.requester.email}
+                  </p>
+                  <p className="text-xs text-[var(--eye-text-secondary)] truncate">{request.requester.email}</p>
+                </div>
+                <span className="text-[10px] text-[var(--eye-text-secondary)] whitespace-nowrap">
+                  {new Date(request.createdAt).toLocaleString()}
+                </span>
+              </div>
+
+              <div className="mt-2 text-xs text-[var(--eye-text-secondary)]">
+                对方输入的邀请码：<span className="font-mono tracking-[0.15em]">{request.inviteCode}</span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRespondBindingRequest(request.id, 'reject')}
+                  disabled={Boolean(busyAction)}
+                  className="h-10 rounded-xl border border-red-200 bg-red-50 text-red-500 font-semibold text-sm hover:bg-red-100 transition-all disabled:opacity-50"
+                >
+                  拒绝
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRespondBindingRequest(request.id, 'accept')}
+                  disabled={Boolean(busyAction)}
+                  className="h-10 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-[#7a8a4b] transition-all disabled:opacity-50"
+                >
+                  同意绑定
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      <section className="relative z-10 mt-3">
+        <button
+          onClick={() => setExpandedManage((x) => !x)}
+          className="w-full h-11 rounded-xl border border-[var(--eye-border)] bg-[var(--eye-bg-secondary)] text-[var(--eye-text-primary)] font-medium flex items-center justify-center gap-2"
+        >
+          <Link2 className="w-4 h-4 text-primary" />
+          {expandedManage ? '收起更换绑定面板' : '展开更换绑定面板'}
+          <ChevronDown className={`w-4 h-4 transition-transform ${expandedManage ? 'rotate-180' : ''}`} />
+        </button>
+
+        {expandedManage && (
+          <div className="rounded-2xl border border-[var(--eye-border)] bg-white/70 dark:bg-black/20 p-4 mt-2">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[var(--eye-text-primary)] font-bold">绑定新的邀请码</p>
+                <p className="text-[var(--eye-text-secondary)] text-xs mt-0.5">
+                  输入对方邀请码后，会在对方应用的消息中心显示确认请求
+                </p>
+              </div>
+            </div>
+
+            {isConnected && (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs p-3 mb-3">
+                你当前已绑定，请先点击上方“解除绑定”，再绑定下一个邀请码。
+              </div>
+            )}
+
+            <div className="relative">
+              <input
+                className={`w-full h-12 rounded-xl bg-[var(--eye-bg-primary)] border-2 ${
+                  error ? 'border-red-500' : 'border-transparent'
+                } focus:border-primary focus:ring-0 text-[var(--eye-text-primary)] text-center font-mono placeholder:font-sans transition-all placeholder:text-sage/40`}
+                placeholder={isConnected ? '请先解除绑定' : '输入邀请码'}
+                type="text"
+                value={inviteCodeInput}
+                disabled={isConnected}
+                onChange={(e) => {
+                  setInviteCodeInput(e.target.value);
+                  setError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleJoin();
+                }}
+              />
+
+              <button
+                onClick={handleJoin}
+                className="absolute right-2 top-2 bottom-2 aspect-square rounded-lg bg-white dark:bg-[#344026] text-sage hover:text-primary hover:bg-primary/10 active:bg-primary active:text-white transition-all duration-200 flex items-center justify-center shadow-sm disabled:opacity-50"
+                disabled={!inviteCodeInput.trim() || isConnected}
+                title="发送请求"
+              >
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 mt-2 text-red-500 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {!currentUser && (
+              <button
+                onClick={onLogin}
+                className="w-full h-11 mt-3 rounded-xl bg-primary text-white font-semibold hover:bg-[#7a8a4b] transition-all"
+              >
+                先去登录账号
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+
+      {!partner && (
+        <section className="relative z-10 mt-3">
+          <button
+            onClick={onComplete}
+            className="w-full h-11 rounded-xl border border-[var(--eye-border)] bg-[var(--eye-bg-secondary)] text-[var(--eye-text-secondary)] font-medium hover:border-primary/30 hover:text-primary transition-all"
+          >
+            暂不绑定，先进入应用
+          </button>
+        </section>
+      )}
+
+      <CuteLoadingScreen show={showSlowLoader} text={loadingText} />
     </div>
   );
 };
+

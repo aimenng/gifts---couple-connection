@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>像素小人 - Pixel Avatar</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fef7f0 0%, #fce4ec 30%, #f3e5f5 60%, #e8eaf6 100%);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 24px;
+    }
+    h1 {
+      margin-bottom: 8px;
+      color: #5c3325;
+      font-size: 22px;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      color: #7a4a3a;
+      font-size: 13px;
+      margin-bottom: 24px;
+      opacity: 0.7;
+    }
+    .canvas-wrap {
+      display: flex;
+      gap: 32px;
+      align-items: flex-end;
+      margin-bottom: 20px;
+    }
+    .canvas-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      border-radius: 16px;
+      box-shadow: 0 12px 40px rgba(92,51,37,0.12);
+      background: white;
+    }
+    .label {
+      margin-top: 10px;
+      color: #7a4a3a;
+      font-size: 12px;
+      opacity: 0.6;
+    }
+    .tags {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .tag {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+    }
+    button {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #5c3325, #7a4a3a);
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(92,51,37,0.2);
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(92,51,37,0.3); }
+    button:active { transform: scale(0.98); }
+    .anim-section {
+      margin-top: 32px;
+      text-align: center;
+    }
+    .anim-section h2 {
+      color: #5c3325;
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+    #animCanvas {
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(92,51,37,0.1);
+      background: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>✨ 像素形象 ✨</h1>
+  <p class="subtitle">根据照片生成的专属像素小人</p>
+
+  <div class="canvas-wrap">
+    <div class="canvas-box">
+      <canvas id="pixelArt" width="224" height="384"></canvas>
+      <p class="label">14×24 · 缩放 16x</p>
+    </div>
+    <div class="canvas-box">
+      <canvas id="pixelArtSmall" width="56" height="96"></canvas>
+      <p class="label">原始 · 缩放 4x</p>
+    </div>
+  </div>
+
+  <div class="tags">
+    <span class="tag" style="background:#1a1a1a15;color:#1a1a1a">🕶️ 圆框墨镜</span>
+    <span class="tag" style="background:#f5f0e6;color:#5c3325">🧥 印花夹克</span>
+    <span class="tag" style="background:#5c332518;color:#5c3325">💇 棕色长发</span>
+    <span class="tag" style="background:#2a2a2e15;color:#2a2a2e">👜 黑色挎包</span>
+    <span class="tag" style="background:#ede6d8;color:#5c3325">👖 阔腿裤</span>
+  </div>
+
+  <div class="controls">
+    <button onclick="downloadPNG()">📥 下载 PNG</button>
+    <button onclick="copyPixelData()">📋 复制数据</button>
+  </div>
+
+  <div class="anim-section">
+    <h2>🎬 动画预览（Idle 呼吸 + 墨镜反光）</h2>
+    <canvas id="animCanvas" width="224" height="384"></canvas>
+  </div>
+
+  <script>
+    const PX = {
+      '.': null,
+      'H': '#5c3325',
+      'h': '#7a4a3a',
+      'S': '#f0c8a8',
+      's': '#d4a088',
+      'G': '#1a1a1a',
+      'g': '#3a4a5a',
+      'W': '#f5f0e6',
+      'w': '#e8e2d6',
+      'B': '#2a2a2e',
+      'b': '#3a6ea5',
+      'o': '#d4874d',
+      'y': '#d4b84d',
+      'P': '#ede6d8',
+      'p': '#ddd6c8',
+      'K': '#5a4a3a',
+      'L': '#d4878c',
+    };
+
+    const FRAME_A = [
+      '....HHHHH.....',
+      '...HHHHHHH....',
+      '..HHHHHHHHH...',
+      '..HhHHHHhHH...',
+      '..HSSSSSSHH...',
+      '.HSGGGSGGGSH..',
+      '.HSGgGSGgGSH..',
+      '..HSSSSSSSH...',
+      '..hsSSLSSsh...',
+      '...HSSSSSH....',
+      '...H.SSS.H....',
+      '..WwWWWWWwW...',
+      '.WbWBWWWyWWW..',
+      '.WoWBWbWWWWW..',
+      '..wSSBSSSWWw..',
+      '...SSsBSSSw...',
+      '...WSBBBsWW...',
+      '....WBBBWW....',
+      '....WWWWWW....',
+      '....PPPPPP....',
+      '...PPpPPpPP...',
+      '..PPp....pPP..',
+      '..KKK....KKK..',
+      '.KKKK....KKKK.',
+    ];
+
+    const FRAME_B = [
+      '.....HHHHH....',
+      '...HHHHHHH....',
+      '...HHHHHHHH...',
+      '..HHhHHHHhH...',
+      '..HSSSSSSHH...',
+      '.HSGGGSGGGSH..',
+      '.HSGGgSGGgSH..',
+      '..HSSSSSSSH...',
+      '..hsSSLSSsh...',
+      '...HSSSSSH....',
+      '...H.SSS.H....',
+      '..WwWWWWWwW...',
+      '.WbWBWWWyWWW..',
+      '.WoWBWbWWWWW..',
+      '..wSSBSSSWWw..',
+      '...SSsBSSSw...',
+      '...WSBBBsWW...',
+      '....WBBBWW....',
+      '....WWWWWW....',
+      '....PPPPPP....',
+      '...PPpPPpPP...',
+      '..PPp....pPP..',
+      '..KKK....KKK..',
+      '.KKKK....KKKK.',
+    ];
+
+    const COLS = 14;
+    const ROWS = 24;
+
+    function drawFrame(ctx, frame, scale) {
+      ctx.clearRect(0, 0, COLS * scale, ROWS * scale);
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          const ch = frame[y][x];
+          const color = PX[ch];
+          if (color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * scale, y * scale, scale, scale);
+          }
+        }
+      }
+    }
+
+    /* Static renders */
+    drawFrame(document.getElementById('pixelArt').getContext('2d'), FRAME_A, 16);
+    drawFrame(document.getElementById('pixelArtSmall').getContext('2d'), FRAME_A, 4);
+
+    /* Animated canvas */
+    const animCtx = document.getElementById('animCanvas').getContext('2d');
+    let frameIdx = 0;
+    let time = 0;
+    const SCALE = 16;
+
+    function animationLoop() {
+      time += 16;
+      if (time % 1200 < 16) frameIdx = 1 - frameIdx;
+      const frame = frameIdx === 0 ? FRAME_A : FRAME_B;
+      const bobY = Math.sin(time / 1500 * Math.PI) * 3;
+
+      animCtx.clearRect(0, 0, COLS * SCALE, ROWS * SCALE);
+      animCtx.save();
+      animCtx.translate(0, bobY);
+      drawFrame(animCtx, frame, SCALE);
+
+      // Glasses gleam sweep (every 5s, 0.8s duration)
+      const gleamCycle = time % 5000;
+      if (gleamCycle > 4000 && gleamCycle < 4800) {
+        const progress = (gleamCycle - 4000) / 800;
+        const gleamX = (3 + progress * 8) * SCALE;
+        const gleamAlpha = Math.sin(progress * Math.PI) * 0.6;
+        animCtx.globalAlpha = gleamAlpha;
+        animCtx.fillStyle = '#ffffff';
+        animCtx.fillRect(gleamX, 5 * SCALE, 3, 2 * SCALE);
+        animCtx.globalAlpha = 1;
+      }
+
+      animCtx.restore();
+
+      // Shadow
+      const shadowScale = 1 - Math.sin(time / 1500 * Math.PI) * 0.15;
+      animCtx.save();
+      animCtx.globalAlpha = 0.08 + Math.sin(time / 1500 * Math.PI) * 0.03;
+      animCtx.fillStyle = '#5c3325';
+      animCtx.beginPath();
+      animCtx.ellipse(COLS * SCALE / 2, ROWS * SCALE - 8, 50 * shadowScale, 4, 0, 0, Math.PI * 2);
+      animCtx.fill();
+      animCtx.restore();
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    requestAnimationFrame(animationLoop);
+
+    function downloadPNG() {
+      const c = document.createElement('canvas');
+      c.width = COLS * 16; c.height = ROWS * 16;
+      drawFrame(c.getContext('2d'), FRAME_A, 16);
+      const a = document.createElement('a');
+      a.download = 'pixel-avatar.png';
+      a.href = c.toDataURL();
+      a.click();
+    }
+
+    function copyPixelData() {
+      const text = JSON.stringify({ palette: PX, frameA: FRAME_A, frameB: FRAME_B }, null, 2);
+      navigator.clipboard.writeText(text).then(() => alert('像素数据已复制到剪贴板！'));
+    }
+  </script>
+</body>
+</html>

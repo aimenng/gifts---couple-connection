@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <script>
     tailwind.config = {
@@ -25,11 +25,13 @@
             surface: "#ffffff",
             "text-main": "#2c2c2a",
             sage: "#758961",
-            "sage-light": "#e3e9de"
+            "sage-light": "#e3e9de",
+            rose: { 50: '#fff1f2', 100: '#ffe4e6', 400: '#fb7185', 500: '#f43f5e' }
           },
           fontFamily: {
             sans: ["Plus Jakarta Sans", "Noto Sans SC", "sans-serif"],
             display: ["Noto Sans SC", "sans-serif"],
+            handwriting: ["Caveat", "cursive"],
           },
           spacing: {
             'safe-top': 'env(safe-area-inset-top, 24px)',
@@ -37,7 +39,12 @@
           },
           boxShadow: {
             soft: "0 20px 40px -15px rgba(0, 0, 0, 0.1)",
-            card: "0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)"
+            card: "0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)",
+            glow: "0 0 20px rgba(138, 154, 91, 0.3)",
+            "inner-glow": "inset 0 2px 10px rgba(138, 154, 91, 0.15)"
+          },
+          borderRadius: {
+            '4xl': '2rem',
           }
         }
       }
@@ -60,10 +67,6 @@
       scrollbar-width: none;
     }
 
-    .paper-texture {
-      background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBlUBZf7Hy-p6QRWCKRZbfHSs6kbyOxjRbbUAtIUWeMTCHydgDI8qEXEWK4bORw5kQ58PPD7-0lQvQe8ucavKPuPiyjvib_hFQo1AJTpCW3QLcBel-2ymgI_TTQK_PEs0Mt2lQ1H0619SLcWZXv84JjVwLJw6AUUT1aeh1t289610aRFRWmFq75tY2BXp5p0D4I69PhGMjrJafivFwZY0X0fgD8-rnR_M59Aud9PMFlAGy8p0h5FuU6teOwnPCOYPCboaEbSplrNno');
-      mix-blend-mode: multiply;
-    }
   </style>
   <script type="importmap">
 {

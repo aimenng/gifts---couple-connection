@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Camera, User as UserIcon, Check, Save } from 'lucide-react';
 import { useAuth } from '../authContext';
 import { IMAGES } from '../constants';
+import { useToast } from '../components/Toast';
 
 interface EditProfilePageProps {
     onBack: () => void;
@@ -18,6 +19,7 @@ const PRESET_AVATARS = [
 
 export const EditProfilePage: React.FC<EditProfilePageProps> = ({ onBack }) => {
     const { currentUser, updateProfile } = useAuth();
+    const { showToast } = useToast();
 
     const [name, setName] = useState('');
     const [avatar, setAvatar] = useState('');
@@ -32,18 +34,21 @@ export const EditProfilePage: React.FC<EditProfilePageProps> = ({ onBack }) => {
         }
     }, [currentUser]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
+        if (isSaving) return;
         setIsSaving(true);
-        // Simulate API delay
-        setTimeout(() => {
-            updateProfile({
-                name,
+        try {
+            await updateProfile({
+                name: name.trim(),
                 avatar,
                 gender
             });
-            setIsSaving(false);
             onBack();
-        }, 800);
+        } catch (error: any) {
+            showToast(error?.message || '保存失败，请稍后重试', 'error');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,15 +90,18 @@ export const EditProfilePage: React.FC<EditProfilePageProps> = ({ onBack }) => {
                         </label>
                     </div>
 
-                    <div className="flex gap-3 overflow-x-auto w-full px-2 py-2 hide-scrollbar justify-center">
-                        {PRESET_AVATARS.map((src, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setAvatar(src)}
-                                className={`flex-shrink-0 w-12 h-12 rounded-full bg-cover bg-center border-2 transition-all ${avatar === src ? 'border-primary ring-2 ring-primary/30 scale-110' : 'border-transparent hover:scale-105'}`}
-                                style={{ backgroundImage: `url('${src}')` }}
-                            ></button>
-                        ))}
+                    <div className="relative w-full">
+                        <div className="flex gap-3 overflow-x-auto w-full px-2 py-2 hide-scrollbar">
+                            {PRESET_AVATARS.map((src, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setAvatar(src)}
+                                    className={`flex-shrink-0 w-12 h-12 rounded-full bg-cover bg-center border-2 transition-all ${avatar === src ? 'border-primary ring-2 ring-primary/30 scale-110' : 'border-transparent hover:scale-105'}`}
+                                    style={{ backgroundImage: `url('${src}')` }}
+                                ></button>
+                            ))}
+                        </div>
+                        <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--eye-bg-primary)] to-transparent pointer-events-none" />
                     </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Layout } from './components/Layout';
 import { BottomNav } from './components/BottomNav';
 import { LandingPage } from './pages/Landing';
@@ -10,47 +10,52 @@ import { ProfilePage } from './pages/Profile';
 import { AuthPage } from './pages/Auth';
 import { EditProfilePage } from './pages/EditProfile';
 import { View } from './types';
-import { AppProvider, useApp } from './context';
+import { AppProvider } from './context';
 import { AuthProvider } from './authContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ToastProvider } from './components/Toast';
+import { syncTime } from './utils/timeService';
+import { cleanupLegacyLocalDataOnce } from './utils/cloudStorageCleanup';
 
 const AppContent: React.FC = () => {
-  const { isConnected } = useApp();
   const [currentView, setCurrentView] = useState<View>(View.LANDING);
+  const [transitioning, setTransitioning] = useState(false);
+  const [displayView, setDisplayView] = useState<View>(View.LANDING);
 
-  // Simple router logic
+  const navigateTo = (view: View) => {
+    if (view === currentView) return;
+    setTransitioning(true);
+    setTimeout(() => {
+      setCurrentView(view);
+      setDisplayView(view);
+      setTransitioning(false);
+    }, 80);
+  };
+
   const renderView = () => {
-    // Always show landing page first
-    if (currentView === View.LANDING) {
-      return <LandingPage onEnter={() => setCurrentView(View.CONNECTION)} />;
+    const viewToRender = displayView;
+
+    if (viewToRender === View.LANDING) {
+      return <LandingPage onEnter={() => navigateTo(View.TIMELINE)} />;
     }
 
-
-    // Account Security page (can be accessed from Profile or Connection)
-    if (currentView === View.ACCOUNT_SECURITY) {
-      return <AuthPage onBack={() => setCurrentView(isConnected ? View.PROFILE : View.CONNECTION)} />;
+    if (viewToRender === View.ACCOUNT_SECURITY) {
+      return <AuthPage onBack={() => navigateTo(View.PROFILE)} />;
     }
 
-    // Edit Profile page
-    if (currentView === View.EDIT_PROFILE) {
-      return <EditProfilePage onBack={() => setCurrentView(View.PROFILE)} />;
+    if (viewToRender === View.EDIT_PROFILE) {
+      return <EditProfilePage onBack={() => navigateTo(View.PROFILE)} />;
     }
 
-    // If not connected, force Connection page
-    if (!isConnected) {
-      return <ConnectionPage
-        onComplete={() => setCurrentView(View.TIMELINE)}
-        onLogin={() => setCurrentView(View.ACCOUNT_SECURITY)}
-      />;
-    }
-
-    // Show requested view only if connected
-    switch (currentView) {
+    switch (viewToRender) {
       case View.CONNECTION:
-        return <ConnectionPage
-          onComplete={() => setCurrentView(View.TIMELINE)}
-          onLogin={() => setCurrentView(View.ACCOUNT_SECURITY)}
-        />;
+        return (
+          <ConnectionPage
+            onComplete={() => navigateTo(View.TIMELINE)}
+            onLogin={() => navigateTo(View.ACCOUNT_SECURITY)}
+            onBack={() => navigateTo(View.PROFILE)}
+          />
+        );
       case View.TIMELINE:
         return <TimelinePage />;
       case View.FOCUS:
@@ -58,41 +63,53 @@ const AppContent: React.FC = () => {
       case View.ANNIVERSARY:
         return <AnniversaryPage />;
       case View.PROFILE:
-        return <ProfilePage
-          onNavigateToAuth={() => setCurrentView(View.ACCOUNT_SECURITY)}
-          onEditProfile={() => setCurrentView(View.EDIT_PROFILE)}
-        />;
-      case View.ACCOUNT_SECURITY:
-        return <AuthPage onBack={() => setCurrentView(View.PROFILE)} />;
-      case View.EDIT_PROFILE:
-        return <EditProfilePage onBack={() => setCurrentView(View.PROFILE)} />;
+        return (
+          <ProfilePage
+            onNavigateToAuth={() => navigateTo(View.ACCOUNT_SECURITY)}
+            onEditProfile={() => navigateTo(View.EDIT_PROFILE)}
+            onManageConnection={() => navigateTo(View.CONNECTION)}
+          />
+        );
       default:
         return <TimelinePage />;
     }
   };
 
-  // Only hide nav on Landing, Connection, Auth and EditProfile pages
-  const showNav = currentView !== View.LANDING && currentView !== View.CONNECTION && currentView !== View.ACCOUNT_SECURITY && currentView !== View.EDIT_PROFILE && isConnected;
+  const showNav =
+    currentView !== View.LANDING &&
+    currentView !== View.CONNECTION &&
+    currentView !== View.ACCOUNT_SECURITY &&
+    currentView !== View.EDIT_PROFILE;
 
   return (
     <Layout fullScreen={!showNav}>
-      {renderView()}
-      {showNav && (
-        <BottomNav
-          currentView={currentView}
-          onChangeView={setCurrentView}
-        />
-      )}
+      <div
+        key={displayView}
+        className={transitioning ? 'page-transition-exit' : 'page-transition-enter'}
+        style={{ display: 'contents' }}
+      >
+        {renderView()}
+      </div>
+      {showNav && <BottomNav currentView={currentView} onChangeView={navigateTo} />}
     </Layout>
   );
 };
 
 const App: React.FC = () => {
+  useEffect(() => {
+    cleanupLegacyLocalDataOnce();
+    syncTime();
+    const interval = setInterval(() => syncTime(), 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <ErrorBoundary>
       <AppProvider>
         <AuthProvider>
-          <AppContent />
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
         </AuthProvider>
       </AppProvider>
     </ErrorBoundary>

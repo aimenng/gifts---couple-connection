@@ -6,7 +6,7 @@ export const COLOR_THEMES = [
     { id: 'sage', name: '自然绿', primary: '#8a9a5b', bg: 'bg-[#8a9a5b]', ring: 'text-[#8a9a5b]', glow: 'drop-shadow-[0_0_15px_rgba(138,154,91,0.7)]', pageBg: '#e8ecd8', pageBgDark: '#1a2210' },
     { id: 'ocean', name: '海洋蓝', primary: '#5b8a9a', bg: 'bg-[#5b8a9a]', ring: 'text-[#5b8a9a]', glow: 'drop-shadow-[0_0_15px_rgba(91,138,154,0.7)]', pageBg: '#d8e8ec', pageBgDark: '#10191d' },
     { id: 'sunset', name: '日落橙', primary: '#e89b5f', bg: 'bg-[#e89b5f]', ring: 'text-[#e89b5f]', glow: 'drop-shadow-[0_0_15px_rgba(232,155,95,0.7)]', pageBg: '#f5e6d8', pageBgDark: '#1d1510' },
-    { id: 'rose', name: '玫瑰红', primary: '#e07088', bg: 'bg-[#e07088]', ring: 'text-[#e07088]', glow: 'drop-shadow-[0_0_15px_rgba(224,112,136,0.7)]', pageBg: '#f5d8e0', pageBgDark: '#1d1015' },
+    { id: 'rose', name: '玫瑰粉', primary: '#e07088', bg: 'bg-[#e07088]', ring: 'text-[#e07088]', glow: 'drop-shadow-[0_0_15px_rgba(224,112,136,0.7)]', pageBg: '#f5d8e0', pageBgDark: '#1d1015' },
     { id: 'lavender', name: '薰衣紫', primary: '#9b8ac7', bg: 'bg-[#9b8ac7]', ring: 'text-[#9b8ac7]', glow: 'drop-shadow-[0_0_15px_rgba(155,138,199,0.7)]', pageBg: '#e5ddf5', pageBgDark: '#1a171d' },
 
     // Sci-Fi & Neon tones - Dark backgrounds with glow
@@ -14,7 +14,7 @@ export const COLOR_THEMES = [
     { id: 'electric', name: '电光紫', primary: '#a855f7', bg: 'bg-[#a855f7]', ring: 'text-[#a855f7]', glow: 'drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]', pageBg: '#150a1f', pageBgDark: '#0a0510' },
     { id: 'plasma', name: '等离粉', primary: '#ff00aa', bg: 'bg-[#ff00aa]', ring: 'text-[#ff00aa]', glow: 'drop-shadow-[0_0_20px_rgba(255,0,170,0.8)]', pageBg: '#1f0a15', pageBgDark: '#100508' },
     { id: 'matrix', name: '矩阵绿', primary: '#00ff88', bg: 'bg-[#00ff88]', ring: 'text-[#00ff88]', glow: 'drop-shadow-[0_0_20px_rgba(0,255,136,0.8)]', pageBg: '#0a1f12', pageBgDark: '#051008' },
-    { id: 'aurora', name: '极光蓝', primary: '#00ffcc', bg: 'bg-[#00ffcc]', ring: 'text-[#00ffcc]', glow: 'drop-shadow-[0_0_20px_rgba(0,255,204,0.8)]', pageBg: '#0a1f1a', pageBgDark: '#05100d' },
+    { id: 'aurora', name: '极光蓝绿', primary: '#00ffcc', bg: 'bg-[#00ffcc]', ring: 'text-[#00ffcc]', glow: 'drop-shadow-[0_0_20px_rgba(0,255,204,0.8)]', pageBg: '#0a1f1a', pageBgDark: '#05100d' },
     { id: 'fire', name: '烈焰橙', primary: '#ff6b35', bg: 'bg-[#ff6b35]', ring: 'text-[#ff6b35]', glow: 'drop-shadow-[0_0_20px_rgba(255,107,53,0.8)]', pageBg: '#1f120a', pageBgDark: '#100905' },
     { id: 'galaxy', name: '银河紫', primary: '#8b5cf6', bg: 'bg-[#8b5cf6]', ring: 'text-[#8b5cf6]', glow: 'drop-shadow-[0_0_20px_rgba(139,92,246,0.8)]', pageBg: '#12101f', pageBgDark: '#08060f' },
 ];

@@ -55,29 +55,33 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                             <button
                                 key={theme.id}
                                 onClick={() => setColorTheme(theme)}
-                                className={`relative w-full aspect-square rounded-xl ${theme.bg} transition-all ${colorTheme.id === theme.id ? 'ring-2 ring-white ring-offset-2 ring-offset-black/20 scale-110' : 'hover:scale-105'}`}
-                                title={theme.name}
+                                className={`relative flex flex-col items-center gap-1.5 transition-all ${colorTheme.id === theme.id ? 'scale-105' : 'hover:scale-105'}`}
                             >
-                                {colorTheme.id === theme.id && (
-                                    <Check className="absolute inset-0 m-auto w-5 h-5 text-white drop-shadow-md" />
-                                )}
+                                <div className={`w-full aspect-square rounded-xl ${theme.bg} transition-all ${colorTheme.id === theme.id ? 'ring-2 ring-white ring-offset-2 ring-offset-black/20 shadow-lg' : ''}`}>
+                                    {colorTheme.id === theme.id && (
+                                        <Check className="absolute inset-0 m-auto w-5 h-5 text-white drop-shadow-md" />
+                                    )}
+                                </div>
+                                <span className={`text-[10px] font-medium ${colorTheme.id === theme.id ? 'opacity-100' : 'opacity-60'}`} style={{ color: isSciTheme ? '#ffffff' : 'var(--eye-text-primary)' }}>{theme.name}</span>
                             </button>
                         ))}
                     </div>
 
                     {/* Sci-Fi Colors */}
                     <p className="text-xs mb-2" style={{ color: isSciTheme ? 'rgba(255,255,255,0.5)' : 'var(--eye-text-secondary)' }}>科幻霓虹</p>
-                    <div className="grid grid-cols-7 gap-2">
+                    <div className="grid grid-cols-4 gap-3">
                         {COLOR_THEMES.slice(5).map(theme => (
                             <button
                                 key={theme.id}
                                 onClick={() => setColorTheme(theme)}
-                                className={`relative w-full aspect-square rounded-xl ${theme.bg} transition-all ${colorTheme.id === theme.id ? 'ring-2 ring-white ring-offset-2 ring-offset-black/20 scale-110 shadow-lg' : 'hover:scale-105'} ${theme.glow}`}
-                                title={theme.name}
+                                className={`relative flex flex-col items-center gap-1.5 transition-all ${colorTheme.id === theme.id ? 'scale-105' : 'hover:scale-105'}`}
                             >
-                                {colorTheme.id === theme.id && (
-                                    <Check className="absolute inset-0 m-auto w-4 h-4 text-white drop-shadow-md" />
-                                )}
+                                <div className={`w-full aspect-square rounded-xl ${theme.bg} transition-all ${theme.glow} ${colorTheme.id === theme.id ? 'ring-2 ring-white ring-offset-2 ring-offset-black/20 shadow-lg' : ''}`}>
+                                    {colorTheme.id === theme.id && (
+                                        <Check className="absolute inset-0 m-auto w-5 h-5 text-white drop-shadow-md" />
+                                    )}
+                                </div>
+                                <span className={`text-[10px] font-medium ${colorTheme.id === theme.id ? 'opacity-100' : 'opacity-60'}`} style={{ color: isSciTheme ? '#ffffff' : 'var(--eye-text-primary)' }}>{theme.name}</span>
                             </button>
                         ))}
                     </div>

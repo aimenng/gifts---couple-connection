@@ -1,8 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, Play, Pause, RotateCcw, Timer, Clock, Zap, Target, Flame, Volume2, VolumeX, ChevronUp, ChevronDown } from 'lucide-react';
 import { COLOR_THEMES, TIMER_SOUND } from '../components/focus/constants';
 import { TimerDisplay } from '../components/focus/TimerDisplay';
 import { SettingsPanel } from '../components/focus/SettingsPanel';
+import { useAuth } from '../authContext';
+import { apiPatch } from '../utils/apiClient';
+import {
+  type CloudFocusStats,
+  fetchFocusStats,
+  getCachedFocusStats,
+  updateFocusStatsCache,
+} from '../utils/focusStatsCache';
 
 // Timer modes
 type TimerMode = 'countdown' | 'countup' | 'pomodoro';
@@ -14,32 +22,52 @@ interface TimerStats {
   totalSessions: number;
 }
 
-const loadStats = (): TimerStats => {
-  try {
-    const saved = localStorage.getItem('pomodoro_stats');
-    if (saved) {
-      const stats = JSON.parse(saved);
-      // Reset daily stats if it's a new day
-      const lastDate = localStorage.getItem('pomodoro_last_date');
-      const today = new Date().toDateString();
-      if (lastDate !== today) {
-        localStorage.setItem('pomodoro_last_date', today);
-        return { ...stats, todayFocusTime: 0, todaySessions: 0 };
-      }
-      return stats;
-    }
-  } catch (e) { }
-  return { todayFocusTime: 0, todaySessions: 0, streak: 0, totalSessions: 0 };
+interface CompleteFocusStatsResponse {
+  ok: boolean;
+  stats: {
+    todayFocusTime: number;
+    todaySessions: number;
+    streak: number;
+    totalSessions: number;
+    lastFocusDate?: string | null;
+  };
+}
+
+const EMPTY_STATS: TimerStats = {
+  todayFocusTime: 0,
+  todaySessions: 0,
+  streak: 0,
+  totalSessions: 0,
 };
 
-const saveStats = (stats: TimerStats) => {
-  try {
-    localStorage.setItem('pomodoro_stats', JSON.stringify(stats));
-    localStorage.setItem('pomodoro_last_date', new Date().toDateString());
-  } catch (e) { }
+const normalizeStats = (stats?: Partial<CloudFocusStats> | null): TimerStats => {
+  const toNum = (value: unknown) => {
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
+
+  return {
+    todayFocusTime: toNum(stats?.todayFocusTime),
+    todaySessions: toNum(stats?.todaySessions),
+    streak: toNum(stats?.streak),
+    totalSessions: toNum(stats?.totalSessions),
+  };
+};
+
+const mapFocusStatsErrorMessage = (error: any, fallback: string): string => {
+  const message = String(error?.message || '').trim();
+  if (!message) return fallback;
+
+  if (message.includes('Route not found') && message.includes('/api/focus/stats')) {
+    return '后端未更新到专注统计接口，请重启并部署最新后端服务。';
+  }
+
+  return message;
 };
 
 export const FocusPage: React.FC = () => {
+  const { currentUser } = useAuth();
+
   // Timer state
   const [initialTime, setInitialTime] = useState(25 * 60);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -55,7 +83,9 @@ export const FocusPage: React.FC = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
 
   // Stats
-  const [stats, setStats] = useState<TimerStats>(loadStats);
+  const [stats, setStats] = useState<TimerStats>(EMPTY_STATS);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState('');
 
   // Check if using a dark/sci-fi theme (indexes 5-11 are sci-fi themes)
   const isSciTheme = ['neon_cyan', 'electric', 'plasma', 'matrix', 'aurora', 'fire', 'galaxy'].includes(colorTheme.id);
@@ -77,6 +107,51 @@ export const FocusPage: React.FC = () => {
     ? Math.min((elapsed / (initialTime || 1)) * 283, 283)
     : initialTime > 0 ? ((initialTime - timeLeft) / initialTime) * 283 : 0;
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCloudStats = async () => {
+      if (!currentUser?.id) {
+        setStats(EMPTY_STATS);
+        setStatsError('请先登录后使用云端专注统计');
+        return;
+      }
+
+      const userId = currentUser.id;
+      const cached = getCachedFocusStats(userId);
+      if (cached) {
+        setStats(normalizeStats(cached));
+      }
+
+      setStatsLoading(!cached);
+      setStatsError('');
+      try {
+        const latest = await fetchFocusStats({
+          userId,
+          force: Boolean(cached),
+        });
+        if (cancelled) return;
+        setStats(normalizeStats(latest));
+      } catch (error: any) {
+        if (cancelled) return;
+        console.error('Failed to load focus stats:', error);
+        if (!cached) {
+          setStatsError(mapFocusStatsErrorMessage(error, '加载专注统计失败'));
+          setStats(EMPTY_STATS);
+        }
+      } finally {
+        if (!cancelled) {
+          setStatsLoading(false);
+        }
+      }
+    };
+
+    loadCloudStats();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id]);
+
   // Timer effect
   useEffect(() => {
     let interval: number | undefined;
@@ -97,19 +172,26 @@ export const FocusPage: React.FC = () => {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive, mode]);
+  }, [isActive, mode, handleTimerComplete]);
 
-  const handleTimerComplete = useCallback(() => {
-    // Update stats
-    const newStats = {
-      ...stats,
-      todayFocusTime: stats.todayFocusTime + Math.round(initialTime / 60),
-      todaySessions: stats.todaySessions + 1,
-      totalSessions: stats.totalSessions + 1,
-      streak: stats.streak + 1,
-    };
-    setStats(newStats);
-    saveStats(newStats);
+  async function handleTimerComplete() {
+    const sessionMinutes = Math.max(1, Math.round(initialTime / 60));
+
+    if (currentUser?.id) {
+      try {
+        const result = await apiPatch<CompleteFocusStatsResponse>('/focus/stats/complete-session', {
+          focusMinutes: sessionMinutes,
+        });
+        setStats(normalizeStats(result.stats));
+        updateFocusStatsCache(currentUser.id, result.stats);
+        setStatsError('');
+      } catch (error: any) {
+        console.error('Failed to sync focus stats:', error);
+        setStatsError(mapFocusStatsErrorMessage(error, '同步专注统计失败'));
+      }
+    } else {
+      setStatsError('请先登录后使用云端专注统计');
+    }
 
     // Sound notification
     if (soundEnabled) {
@@ -126,12 +208,11 @@ export const FocusPage: React.FC = () => {
 
     // Notification
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('🎉 专注完成！', {
-        body: `太棒了！完成了 ${Math.round(initialTime / 60)} 分钟专注`,
+      new Notification('🎉 专注完成', {
+        body: `太棒了！完成了 ${sessionMinutes} 分钟专注`,
       });
     }
-  }, [initialTime, soundEnabled, stats]);
-
+  }
   const toggleTimer = () => setIsActive(!isActive);
 
   const handleTimeChange = (mins: number) => {
@@ -242,7 +323,7 @@ export const FocusPage: React.FC = () => {
                       } disabled:opacity-50`}
                     style={Math.ceil(initialTime / 60) !== time || showTimePicker ? { backgroundColor: cardBg, color: textSecondary } : {}}
                   >
-                    {time}分
+                    {time}分钟
                   </button>
                 ))}
                 <button
@@ -326,6 +407,19 @@ export const FocusPage: React.FC = () => {
             </button>
           </div>
 
+          {(statsLoading || statsError) && (
+            <div className="w-full mb-3 px-2">
+              {statsLoading && (
+                <p className="text-xs" style={{ color: textSecondary }}>
+                  云端专注数据同步中...
+                </p>
+              )}
+              {statsError && (
+                <p className="text-xs text-red-500 mt-1">{statsError}</p>
+              )}
+            </div>
+          )}
+
           {/* Stats Cards */}
           <div className="grid grid-cols-3 gap-3 w-full mb-6">
             <div
@@ -358,7 +452,7 @@ export const FocusPage: React.FC = () => {
           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border w-full" style={{ borderColor: colorTheme.primary, backgroundColor: `${colorTheme.primary}25` }}>
             <Target className="w-5 h-5" style={{ color: colorTheme.primary }} />
             <p className="text-sm" style={{ color: textColor }}>
-              {isActive ? '保持专注，你做得很好！💪' : '点击开始，专注当下 🎯'}
+              {isActive ? '保持专注，Ta 也在为你们的未来努力。' : '一起专注，共同成长。'}
             </p>
           </div>
         </div>
@@ -377,3 +471,6 @@ export const FocusPage: React.FC = () => {
     </div>
   );
 };
+
+
+

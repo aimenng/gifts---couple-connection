@@ -6,24 +6,34 @@ export enum View {
   ANNIVERSARY = 'ANNIVERSARY',
   PROFILE = 'PROFILE',
   ACCOUNT_SECURITY = 'ACCOUNT_SECURITY',
-  EDIT_PROFILE = 'EDIT_PROFILE'
+  EDIT_PROFILE = 'EDIT_PROFILE',
 }
 
 export interface User {
   id: string;
   email: string;
-  passwordHash: string; // In production this would be hashed on server
-  invitationCode: string; // User's unique invite code
+  passwordHash?: string; // Never store plain password in frontend
+  invitationCode: string; // User's own unique invite code
+  boundInvitationCode?: string; // Invite code from another account that user has bound
+  emailVerified?: boolean;
   createdAt: string;
   name?: string;
   avatar?: string;
   gender?: 'male' | 'female';
-  partnerId?: string | null; // ID of the partner
+  partnerId?: string | null;
+}
+
+export interface ContentAuthor {
+  id: string;
+  name?: string;
+  email?: string;
+  avatar?: string;
+  gender?: 'male' | 'female';
 }
 
 export interface AuthState {
   currentUser: User | null;
-  users: User[]; // Mock database of users
+  users: User[];
 }
 
 export interface Memory {
@@ -31,19 +41,20 @@ export interface Memory {
   title: string;
   date: string;
   image: string;
-  rotation: string; // Tailwind class for slight rotation
+  rotation: string;
+  userId?: string;
+  author?: ContentAuthor | null;
 }
 
-export type EventType = string; // 支持自定义类型
+export interface YearStat {
+  year: string;
+  count: number;
+  coverMemoryId: string;
+}
 
-// 预设的事件类型选项
-export const DEFAULT_EVENT_TYPES = [
-  '纪念日',
-  '生日',
-  '旅行',
-  '节日',
-  '其他'
-] as const;
+export type EventType = string;
+
+export const DEFAULT_EVENT_TYPES = ['纪念日', '生日', '旅行', '节日', '其他'] as const;
 
 export interface AnniversaryEvent {
   id: string;
@@ -52,4 +63,8 @@ export interface AnniversaryEvent {
   date: string; // YYYY-MM-DD
   type: EventType;
   image?: string;
+  userId?: string;
+  author?: ContentAuthor | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
