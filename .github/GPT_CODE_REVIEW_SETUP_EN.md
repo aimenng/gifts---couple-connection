@@ -1,6 +1,6 @@
-# GPT Codex Code Review Setup Guide
+# GPT-4 Code Review Setup Guide
 
-This repository has GPT-powered automated code review enabled.
+This repository has GPT-4 powered automated code review enabled.
 
 ## Features
 
