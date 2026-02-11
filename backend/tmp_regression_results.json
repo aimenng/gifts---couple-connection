@@ -1,0 +1,182 @@
+﻿[
+    {
+        "id":  "T01",
+        "desc":  "Health Check",
+        "expected":  "200 + ok=true",
+        "pass":  true,
+        "status":  200,
+        "latency_ms":  34.67,
+        "message":  "{\"ok\":true,\"service\":\"gifts-backend\",\"time\":\"2026-02-11T04:17:59.397Z\"}",
+        "notes":  ""
+    },
+    {
+        "id":  "T02a",
+        "desc":  "Register request code (existing)",
+        "expected":  "200 + generic message",
+        "pass":  true,
+        "status":  200,
+        "latency_ms":  3395.29,
+        "message":  "如果邮箱可用于注册，验证码将发送到该邮箱；若已注册，请直接登录或使用忘记密码。",
+        "notes":  ""
+    },
+    {
+        "id":  "T02b",
+        "desc":  "Register request code (non-existing)",
+        "expected":  "200 + generic message",
+        "pass":  true,
+        "status":  200,
+        "latency_ms":  1088.35,
+        "message":  "如果邮箱可用于注册，验证码将发送到该邮箱；若已注册，请直接登录或使用忘记密码。",
+        "notes":  "msgEqualWithT02a=True"
+    },
+    {
+        "id":  "T02c",
+        "desc":  "Register request code cooldown",
+        "expected":  "429",
+        "pass":  true,
+        "status":  429,
+        "latency_ms":  2114.89,
+        "message":  "",
+        "notes":  ""
+    },
+    {
+        "id":  "T03",
+        "desc":  "Register verify wrong code",
+        "expected":  "400 + unified verify error",
+        "pass":  true,
+        "status":  400,
+        "latency_ms":  1858.23,
+        "message":  "",
+        "notes":  ""
+    },
+    {
+        "id":  "T04a",
+        "desc":  "Reset request code (existing)",
+        "expected":  "200 + generic message",
+        "pass":  true,
+        "status":  200,
+        "latency_ms":  4702.52,
+        "message":  "如果邮箱已注册，验证码将发送到该邮箱",
+        "notes":  ""
+    },
+    {
+        "id":  "T04b",
+        "desc":  "Reset request code (non-existing)",
+        "expected":  "200 + generic message",
+        "pass":  true,
+        "status":  200,
+        "latency_ms":  669.68,
+        "message":  "如果邮箱已注册，验证码将发送到该邮箱",
+        "notes":  "msgEqualWithT04a=True"
+    },
+    {
+        "id":  "T04c",
+        "desc":  "Reset request code cooldown",
+        "expected":  "429",
+        "pass":  true,
+        "status":  429,
+        "latency_ms":  10439.72,
+        "message":  "",
+        "notes":  ""
+    },
+    {
+        "id":  "T05",
+        "desc":  "Reset wrong code",
+        "expected":  "400 + unified verify error",
+        "pass":  true,
+        "status":  400,
+        "latency_ms":  1732.94,
+        "message":  "",
+        "notes":  ""
+    },
+    {
+        "id":  "T06",
+        "desc":  "Login wrong credentials",
+        "expected":  "401",
+        "pass":  false,
+        "status":  0,
+        "latency_ms":  20004.87,
+        "message":  "The request was aborted: The operation has timed out.",
+        "notes":  ""
+    },
+    {
+        "id":  "T07a",
+        "desc":  "Login success",
+        "expected":  "200 + token",
+        "pass":  false,
+        "status":  0,
+        "latency_ms":  20012.18,
+        "message":  "The request was aborted: The operation has timed out.",
+        "notes":  "login failed"
+    },
+    {
+        "id":  "T07b",
+        "desc":  "Auth me with token",
+        "expected":  "200 + user payload",
+        "pass":  false,
+        "status":  "",
+        "latency_ms":  "",
+        "message":  "",
+        "notes":  "Skipped: no token from T07a"
+    },
+    {
+        "id":  "T08a",
+        "desc":  "Password reset with real OTP",
+        "expected":  "200",
+        "pass":  false,
+        "status":  "",
+        "latency_ms":  "",
+        "message":  "",
+        "notes":  "Manual: need OTP from email"
+    },
+    {
+        "id":  "T08b",
+        "desc":  "Old token revoked after reset",
+        "expected":  "401",
+        "pass":  false,
+        "status":  "",
+        "latency_ms":  "",
+        "message":  "",
+        "notes":  "Manual: depends on T08a"
+    },
+    {
+        "id":  "T08c",
+        "desc":  "Login with new password",
+        "expected":  "200 + token",
+        "pass":  false,
+        "status":  "",
+        "latency_ms":  "",
+        "message":  "",
+        "notes":  "Manual: depends on T08a"
+    },
+    {
+        "id":  "T09a",
+        "desc":  "Memories input validation",
+        "expected":  "400",
+        "pass":  false,
+        "status":  "",
+        "latency_ms":  "",
+        "message":  "",
+        "notes":  "Skipped: no token"
+    },
+    {
+        "id":  "T09b",
+        "desc":  "Events input validation",
+        "expected":  "400",
+        "pass":  false,
+        "status":  "",
+        "latency_ms":  "",
+        "message":  "",
+        "notes":  "Skipped: no token"
+    },
+    {
+        "id":  "T10",
+        "desc":  "Optional latency spot check",
+        "expected":  "delta \u003c 400ms",
+        "pass":  false,
+        "status":  200,
+        "latency_ms":  4702.52,
+        "message":  "如果邮箱已注册，验证码将发送到该邮箱",
+        "notes":  "nonExistMs=669.68, deltaMs=4032.84"
+    }
+]
