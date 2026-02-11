@@ -145,7 +145,11 @@ router.post(
     if (upsertError) throw upsertError;
 
     if (shouldSendSignupCode) {
-      fireAndForget(sendSignupCodeEmail(email, code), 'send-signup-code');
+      try {
+        await sendSignupCodeEmail(email, code);
+      } catch (error) {
+        console.error('[send-signup-code]', error?.message || error);
+      }
     }
 
     return respondAfterUniformLatency(res, startedAt, {
@@ -311,7 +315,11 @@ router.post(
     if (upsertError) throw upsertError;
 
     if (shouldSendResetCode) {
-      fireAndForget(sendPasswordResetCodeEmail(email, code), 'send-reset-password-code');
+      try {
+        await sendPasswordResetCodeEmail(email, code);
+      } catch (error) {
+        console.error('[send-reset-password-code]', error?.message || error);
+      }
     }
 
     return respondAfterUniformLatency(res, startedAt, {
