@@ -10,6 +10,12 @@ requireConfig();
 
 const app = express();
 
+// Vercel sits behind a reverse proxy — trust it so express-rate-limit
+// can read the real client IP from X-Forwarded-For.
+if (process.env.VERCEL) {
+  app.set('trust proxy', 1);
+}
+
 app.use(
   cors({
     origin: config.corsOrigin === '*' ? true : config.corsOrigin.split(',').map((x) => x.trim()),
