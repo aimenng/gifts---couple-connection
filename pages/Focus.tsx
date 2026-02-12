@@ -175,7 +175,7 @@ export const FocusPage: React.FC = () => {
     if (soundEnabled) {
       try {
         const audio = new Audio(TIMER_SOUND);
-        audio.play().catch(() => {});
+        audio.play().catch((e) => console.warn('Audio playback failed:', e));
       } catch (e) { }
     }
 

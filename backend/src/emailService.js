@@ -1,9 +1,8 @@
 import nodemailer from 'nodemailer';
 import { config } from './config.js';
+import { escapeHtml } from './helpers.js';
 
 let transporter;
-
-const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const buildError = (message) => {
   const error = new Error(message);

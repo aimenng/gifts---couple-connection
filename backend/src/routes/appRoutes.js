@@ -10,6 +10,7 @@ import {
   assertInviteCode,
   buildHttpError,
   createRandomToken,
+  escapeHtml,
   ensureUserSettings,
   getUserById,
   getUserByInviteCode,
@@ -444,8 +445,6 @@ const mapMemoryForResponse = async (row, authorRow = null) => {
 
 const mapMemoriesForResponse = async (rows, authorMap = null) =>
   mapWithConcurrency(rows || [], 6, async (row) => mapMemoryForResponse(row, authorMap?.get(row.user_id)));
-
-const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const htmlResponse = (title, message, buttonText = 'Open App') => {
   const safeTitle = escapeHtml(title);
