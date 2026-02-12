@@ -6,7 +6,7 @@ const isNativePlatform =
     ? Boolean((window as any).Capacitor.isNativePlatform())
     : false;
 
-const DEFAULT_NATIVE_API_BASE_URL = 'http://10.0.2.2:3001/api';
+const DEFAULT_NATIVE_API_BASE_URL = 'http://10.0.2.2:8787/api';
 const API_BASE_URL =
   env.VITE_API_BASE_URL || (isNativePlatform ? env.VITE_API_BASE_URL_MOBILE || DEFAULT_NATIVE_API_BASE_URL : '/api');
 const REQUEST_TIMEOUT_MS = 60_000;
