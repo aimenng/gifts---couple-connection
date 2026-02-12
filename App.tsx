@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Layout } from './components/Layout';
 import { BottomNav } from './components/BottomNav';
 import { LandingPage } from './pages/Landing';
@@ -109,6 +110,7 @@ const App: React.FC = () => {
         <AuthProvider>
           <ToastProvider>
             <AppContent />
+            <SpeedInsights />
           </ToastProvider>
         </AuthProvider>
       </AppProvider>
