@@ -67,6 +67,7 @@ export const generateInviteCode = () => {
 export const generateVerificationCode = () => String(Math.floor(100000 + Math.random() * 900000));
 export const createRandomToken = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
 export const hashValue = (value) => crypto.createHash('sha256').update(String(value)).digest('hex');
+export const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
 export const nowIso = () => new Date().toISOString();
 export const addMinutesIso = (minutes) => new Date(Date.now() + minutes * 60 * 1000).toISOString();
 export const addHoursIso = (hours) => new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
