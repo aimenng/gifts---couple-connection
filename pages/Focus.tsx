@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Settings, Play, Pause, RotateCcw, Timer, Clock, Zap, Target, Flame, Volume2, VolumeX, ChevronUp, ChevronDown } from 'lucide-react';
 import { COLOR_THEMES, TIMER_SOUND } from '../components/focus/constants';
 import { TimerDisplay } from '../components/focus/TimerDisplay';
@@ -152,29 +152,7 @@ export const FocusPage: React.FC = () => {
     };
   }, [currentUser?.id]);
 
-  // Timer effect
-  useEffect(() => {
-    let interval: number | undefined;
-    if (isActive) {
-      interval = window.setInterval(() => {
-        if (mode === 'countup') {
-          setElapsed(prev => prev + 1);
-        } else {
-          setTimeLeft(prev => {
-            if (prev <= 1) {
-              setIsActive(false);
-              handleTimerComplete();
-              return 0;
-            }
-            return prev - 1;
-          });
-        }
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isActive, mode, handleTimerComplete]);
-
-  async function handleTimerComplete() {
+  const handleTimerComplete = useCallback(async () => {
     const sessionMinutes = Math.max(1, Math.round(initialTime / 60));
 
     if (currentUser?.id) {
@@ -197,7 +175,7 @@ export const FocusPage: React.FC = () => {
     if (soundEnabled) {
       try {
         const audio = new Audio(TIMER_SOUND);
-        audio.play();
+        audio.play().catch(() => {});
       } catch (e) { }
     }
 
@@ -212,7 +190,34 @@ export const FocusPage: React.FC = () => {
         body: `太棒了！完成了 ${sessionMinutes} 分钟专注`,
       });
     }
-  }
+  }, [initialTime, currentUser?.id, soundEnabled]);
+
+  const handleTimerCompleteRef = useRef(handleTimerComplete);
+  useEffect(() => {
+    handleTimerCompleteRef.current = handleTimerComplete;
+  }, [handleTimerComplete]);
+
+  // Timer effect
+  useEffect(() => {
+    let interval: number | undefined;
+    if (isActive) {
+      interval = window.setInterval(() => {
+        if (mode === 'countup') {
+          setElapsed(prev => prev + 1);
+        } else {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              setIsActive(false);
+              handleTimerCompleteRef.current();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isActive, mode]);
   const toggleTimer = () => setIsActive(!isActive);
 
   const handleTimeChange = (mins: number) => {

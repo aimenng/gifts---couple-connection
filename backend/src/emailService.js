@@ -3,6 +3,8 @@ import { config } from './config.js';
 
 let transporter;
 
+const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 const buildError = (message) => {
   const error = new Error(message);
   error.status = 500;
@@ -104,16 +106,20 @@ export const sendBindingConfirmEmail = async ({
   confirmUrl,
 }) => {
   const ttlHours = config.bindingRequestTtlHours;
+  const safeName = escapeHtml(requesterName);
+  const safeEmail = escapeHtml(requesterEmail);
+  const safeCode = escapeHtml(inviteCode);
+  const safeUrl = escapeHtml(confirmUrl);
   const subject = '【Gifts】关系绑定确认请求';
   const text = `${requesterName} (${requesterEmail}) 希望绑定你的邀请码 ${inviteCode}。请在 ${ttlHours} 小时内打开此链接确认：${confirmUrl}`;
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.7;color:#1f2937;">
       <h2 style="margin:0 0 12px;">Gifts 关系绑定确认</h2>
-      <p><strong>${requesterName}</strong>（${requesterEmail}）正在请求绑定你的邀请码：</p>
-      <p style="font-size:20px;font-weight:700;letter-spacing:2px;margin:10px 0;color:#64723f;">${inviteCode}</p>
+      <p><strong>${safeName}</strong>（${safeEmail}）正在请求绑定你的邀请码：</p>
+      <p style="font-size:20px;font-weight:700;letter-spacing:2px;margin:10px 0;color:#64723f;">${safeCode}</p>
       <p>请在 ${ttlHours} 小时内点击下面按钮确认：</p>
       <p style="margin:18px 0;">
-        <a href="${confirmUrl}" style="display:inline-block;padding:10px 18px;background:#64723f;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">
+        <a href="${safeUrl}" style="display:inline-block;padding:10px 18px;background:#64723f;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">
           同意绑定
         </a>
       </p>

@@ -445,13 +445,20 @@ const mapMemoryForResponse = async (row, authorRow = null) => {
 const mapMemoriesForResponse = async (rows, authorMap = null) =>
   mapWithConcurrency(rows || [], 6, async (row) => mapMemoryForResponse(row, authorMap?.get(row.user_id)));
 
-const htmlResponse = (title, message, buttonText = 'Open App') => `
+const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const htmlResponse = (title, message, buttonText = 'Open App') => {
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message);
+  const safeButtonText = escapeHtml(buttonText);
+  const safeFrontendUrl = escapeHtml(config.frontendUrl);
+  return `
 <!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${title}</title>
+    <title>${safeTitle}</title>
     <style>
       body { font-family: Arial, sans-serif; background: #f8f8f6; color: #1f2937; margin: 0; padding: 24px; }
       .card { max-width: 560px; margin: 40px auto; background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);}
@@ -463,14 +470,15 @@ const htmlResponse = (title, message, buttonText = 'Open App') => `
   </head>
   <body>
     <div class="card">
-      <h1>${title}</h1>
-      <p>${message}</p>
-      <a href="${config.frontendUrl}">${buttonText}</a>
-      <p class="muted">If the button does not open the app, copy this URL: ${config.frontendUrl}</p>
+      <h1>${safeTitle}</h1>
+      <p>${safeMessage}</p>
+      <a href="${safeFrontendUrl}">${safeButtonText}</a>
+      <p class="muted">If the button does not open the app, copy this URL: ${safeFrontendUrl}</p>
     </div>
   </body>
 </html>
 `;
+};
 
 const createBindingRequest = async (requester, target, inviteCode) => {
   const token = createRandomToken(32);

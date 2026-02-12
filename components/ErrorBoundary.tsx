@@ -68,8 +68,15 @@ export class ErrorBoundary extends Component<Props, State> {
 
                         <button
                             onClick={() => {
+                                try {
+                                    localStorage.removeItem('gifts_auth_token');
+                                    localStorage.removeItem('doubao_api_key');
+                                    localStorage.removeItem('app-theme');
+                                    localStorage.removeItem('gifts_cloud_only_migration_v1');
+                                    localStorage.removeItem('gifts_timeline_view_mode');
+                                    localStorage.removeItem('gifts_timeline_sort_order');
+                                } catch {}
                                 window.location.href = '/';
-                                localStorage.clear(); // Extreme recovery
                                 setTimeout(() => window.location.reload(), 100);
                             }}
                             className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
